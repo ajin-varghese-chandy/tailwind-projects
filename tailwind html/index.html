@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Conway's Game of Life</title>
+  <script src="https://cdn.tailwindcss.com">
+  </script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            grid: '#1a1a2e',
+            cell: '#00d4ff',
+            glow: '#00ff88',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #0f0f1a;
+      min-height: 100vh;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+
+    canvas {
+      display: block;
+      image-rendering: pixelated;
+      border-radius: 12px;
+      box-shadow: 0 0 40px rgba(0, 212, 255, 0.08), 0 0 80px rgba(0, 212, 255, 0.04);
+      cursor: pointer;
+    }
+
+    .glow-btn {
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .glow-btn:hover:not(:disabled) {
+      box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+      transform: translateY(-1px);
+    }
+
+    .glow-btn:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    .glow-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .cell-count {
+      text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #1a1a2e;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #00d4ff;
+      border-radius: 3px;
+    }
+
+    .dropdown {
+      background: #16213e;
+      border: 1px solid rgba(0, 212, 255, 0.2);
+      color: #e0e0e0;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 0.875rem;
+      cursor: pointer;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .dropdown:focus {
+      border-color: #00d4ff;
+    }
+
+    .dropdown option {
+      background: #16213e;
+      color: #e0e0e0;
+    }
+
+    .speed-label {
+      color: #888;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 4px;
+      background: #2a2a4a;
+      border-radius: 2px;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #00d4ff;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(0, 212, 255, 0.4);
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #00d4ff;
+      cursor: pointer;
+      border: none;
+    }
+
+    @media (max-width: 640px) {
+      .controls-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .cell-alive {
+      background: #00d4ff;
+      box-shadow: 0 0 6px rgba(0, 212, 255, 0.6);
+    }
+
+    .stat-card {
+      background: rgba(22, 33, 62, 0.8);
+      border: 1px solid rgba(0, 212, 255, 0.1);
+      border-radius: 10px;
+      padding: 12px 20px;
+      text-align: center;
+      backdrop-filter: blur(4px);
+    }
+
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #00d4ff;
+    }
+
+    .stat-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #888;
+      margin-top: 2px;
+    }
+  </style>
+</head>
+<body>
+  <div class="min-h-screen flex flex-col items-center px-4 py-6">
+    <header class="text-center mb-6">
+      <h1 class="text-3xl sm:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-emerald-400">
+        Conway's Game of Life
+      </h1>
+      <p class="text-gray-500 text-sm mt-1 max-w-xl mx-auto">
+        A zero-player cellular automaton — watch emergent complexity from simple rules
+      </p>
+    </header>
+
+    <div class="w-full max-w-[820px]">
+      <div class="flex flex-wrap items-center justify-center gap-3 mb-4">
+        <button id="btnPlay" class="glow-btn px-5 py-2 rounded-lg font-semibold text-sm bg-emerald-600 hover:bg-emerald-500 text-white transition-colors">
+          ▶ Play
+        </button>
+        <button id="btnStep" class="glow-btn px-4 py-2 rounded-lg font-semibold text-sm bg-cyan-700 hover:bg-cyan-600 text-white transition-colors">
+          Step
+        </button>
+        <button id="btnClear" class="glow-btn px-4 py-2 rounded-lg font-semibold text-sm bg-slate-700 hover:bg-slate-600 text-white transition-colors">
+          ✕ Clear
+        </button>
+        <button id="btnRandom" class="glow-btn px-4 py-2 rounded-lg font-semibold text-sm bg-violet-700 hover:bg-violet-600 text-white transition-colors">
+          ↻ Random
+        </button>
+
+        <select id="patternSelect" class="dropdown">
+          <option value="">— Patterns —</option>
+          <option value="glider">Glider</option>
+          <option value="blinker">Blinker</option>
+          <option value="block">Block</option>
+          <option value="beehive">Beehive</option>
+          <option value="pulsar">Pulsar</option>
+          <option value="gosper">Gosper Glider Gun</option>
+          <option value="diehard">Diehard</option>
+        </select>
+      </div>
+
+      <div class="flex items-center justify-center gap-6 mb-4 px-2">
+        <div class="flex items-center gap-3 flex-1 max-w-[200px]">
+          <span class="speed-label">Speed</span>
+          <input type="range" id="speedRange" min="1" max="10" value="5" class="flex-1">
+        </div>
+      </div>
+
+      <div class="flex justify-center mb-3">
+        <canvas id="canvas" width="800" height="600" class="w-full max-w-[800px] border border-cyan-900/40"></canvas>
+      </div>
+
+      <div class="grid grid-cols-4 gap-3 max-w-[800px] mx-auto">
+        <div class="stat-card">
+          <div class="stat-value" id="genCount">0</div>
+          <div class="stat-label">Generation</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="popCount">0</div>
+          <div class="stat-label">Population</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="liveCells">0</div>
+          <div class="stat-label">Born</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="deadCells">0</div>
+          <div class="stat-label">Died</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ─── Canvas Setup ────────────────────────────────────────────────────────────
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    // Responsive sizing
+    function resizeCanvas() {
+      const maxW = Math.min(800, window.innerWidth - 32);
+      const ratio = 600 / 800;
+      canvas.style.width = maxW + 'px';
+      canvas.style.height = (maxW * ratio) + 'px';
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    // ─── Grid Config ─────────────────────────────────────────────────────────────
+    const COLS = 80;
+    const ROWS = 60;
+    const CELL_SIZE = canvas.width / COLS;
+
+    let grid = [];
+    let running = false;
+    let animationId = null;
+    let generation = 0;
+    let lastBorn = 0;
+    let lastDied = 0;
+
+    // ─── Initialize ──────────────────────────────────────────────────────────────
+    function createEmptyGrid() {
+      return Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+    }
+
+    function randomGrid(probability = 0.25) {
+      return Array.from({ length: ROWS }, () =>
+        Array.from({ length: COLS }, () => Math.random() < probability ? 1 : 0)
+      );
+    }
+
+    grid = randomGrid(0.2);
+    generation = 0;
+    lastBorn = 0;
+    lastDied = 0;
+
+    // ─── Patterns ────────────────────────────────────────────────────────────────
+    const PATTERNS = {
+      glider: [
+        [0, 1, 0],
+        [0, 0, 1],
+        [1, 1, 1]
+      ],
+      blinker: [
+        [1, 1, 1]
+      ],
+      block: [
+        [1, 1],
+        [1, 1]
+      ],
+      beehive: [
+        [0, 1, 1, 0],
+        [1, 0, 0, 1],
+        [0, 1, 1, 0]
+      ],
+      pulsar: (() => {
+        const p = Array.from({ length: 13 }, () => Array(13).fill(0));
+        const r = [0, 1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12];
+        // top
+        p[0][2] = p[0][3] = p[0][4] = p[0][8] = p[0][9] = p[0][10] = 1;
+        p[2][0] = p[2][5] = p[2][7] = p[2][12] = 1;
+        p[3][0] = p[3][5] = p[3][7] = p[3][12] = 1;
+        p[4][0] = p[4][5] = p[4][7] = p[4][12] = 1;
+        p[5][2] = p[5][3] = p[5][4] = p[5][8] = p[5][9] = p[5][10] = 1;
+        // bottom
+        for (let i = 0; i < 13; i++)
+          for (let j = 0; j < 13; j++)
+            p[12 - i][12 - j] = p[i][j];
+        return p;
+      })(),
+      gosper: [
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      ],
+      diehard: [
+        [0, 0, 0, 0, 0, 0, 1, 0],
+        [1, 1, 0, 0, 0, 0, 0, 0],
+        [0, 1, 0, 0, 0, 0, 0, 1],
+      ],
+    };
+
+    function placePattern(pattern, offsetR, offsetC) {
+      // Clear grid
+      grid = createEmptyGrid();
+      for (let r = 0; r < pattern.length; r++) {
+        for (let c = 0; c < pattern[0].length; c++) {
+          const gr = offsetR + r;
+          const gc = offsetC + c;
+          if (gr >= 0 && gr < ROWS && gc >= 0 && gc < COLS && pattern[r][c]) {
+            grid[gr][gc] = 1;
+          }
+        }
+      }
+      generation = 0;
+      lastBorn = 0;
+      lastDied = 0;
+      draw();
+    }
+
+    // ─── Game Logic ──────────────────────────────────────────────────────────────
+    function countNeighbors(g, r, c) {
+      let count = 0;
+      for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) {
+          if (dr === 0 && dc === 0) continue;
+          const nr = (r + dr + ROWS) % ROWS;
+          const nc = (c + dc + COLS) % COLS;
+          count += g[nr][nc];
+        }
+      }
+      return count;
+    }
+
+    function nextGeneration() {
+      const newGrid = createEmptyGrid();
+      let born = 0;
+      let died = 0;
+
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          const neighbors = countNeighbors(grid, r, c);
+          if (grid[r][c] === 1) {
+            if (neighbors === 2 || neighbors === 3) {
+              newGrid[r][c] = 1;
+            } else {
+              died++;
+            }
+          } else {
+            if (neighbors === 3) {
+              newGrid[r][c] = 1;
+              born++;
+            }
+          }
+        }
+      }
+
+      grid = newGrid;
+      generation++;
+      lastBorn = born;
+      lastDied = died;
+    }
+
+    // ─── Rendering ───────────────────────────────────────────────────────────────
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw grid lines
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+      ctx.lineWidth = 0.5;
+      for (let r = 0; r <= ROWS; r++) {
+        ctx.beginPath();
+        ctx.moveTo(0, r * CELL_SIZE);
+        ctx.lineTo(canvas.width, r * CELL_SIZE);
+        ctx.stroke();
+      }
+      for (let c = 0; c <= COLS; c++) {
+        ctx.beginPath();
+        ctx.moveTo(c * CELL_SIZE, 0);
+        ctx.lineTo(c * CELL_SIZE, canvas.height);
+        ctx.stroke();
+      }
+
+      let population = 0;
+
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          if (grid[r][c]) {
+            population++;
+            const x = c * CELL_SIZE;
+            const y = r * CELL_SIZE;
+            const pad = 1;
+
+            // Glow
+            const gradient = ctx.createRadialGradient(
+              x + CELL_SIZE / 2, y + CELL_SIZE / 2, 0,
+              x + CELL_SIZE / 2, y + CELL_SIZE / 2, CELL_SIZE
+            );
+            gradient.addColorStop(0, 'rgba(0, 212, 255, 0.3)');
+            gradient.addColorStop(1, 'rgba(0, 212, 255, 0)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(x - CELL_SIZE / 2, y - CELL_SIZE / 2, CELL_SIZE * 2, CELL_SIZE * 2);
+
+            // Cell
+            ctx.fillStyle = '#00d4ff';
+            ctx.shadowColor = 'rgba(0, 212, 255, 0.5)';
+            ctx.shadowBlur = 8;
+            ctx.fillRect(x + pad, y + pad, CELL_SIZE - pad * 2, CELL_SIZE - pad * 2);
+            ctx.shadowBlur = 0;
+
+            // Inner highlight
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+            ctx.fillRect(x + pad + 2, y + pad + 2, CELL_SIZE - pad * 2 - 6, 2);
+          }
+        }
+      }
+
+      // Update stats
+      document.getElementById('genCount').textContent = generation;
+      document.getElementById('popCount').textContent = population;
+      document.getElementById('liveCells').textContent = lastBorn;
+      document.getElementById('deadCells').textContent = lastDied;
+    }
+
+    // ─── Controls ────────────────────────────────────────────────────────────────
+    const btnPlay = document.getElementById('btnPlay');
+    const btnStep = document.getElementById('btnStep');
+    const btnClear = document.getElementById('btnClear');
+    const btnRandom = document.getElementById('btnRandom');
+    const speedRange = document.getElementById('speedRange');
+    const patternSelect = document.getElementById('patternSelect');
+
+    function getDelay() {
+      const val = parseInt(speedRange.value);
+      // map 1-10 to 500ms -> 30ms
+      return Math.max(30, 560 - val * 53);
+    }
+
+    function step() {
+      nextGeneration();
+      draw();
+    }
+
+    function play() {
+      if (running) {
+        running = false;
+        btnPlay.textContent = '▶ Play';
+        btnPlay.className = 'glow-btn px-5 py-2 rounded-lg font-semibold text-sm bg-emerald-600 hover:bg-emerald-500 text-white transition-colors';
+        if (animationId) {
+          cancelAnimationFrame(animationId);
+          animationId = null;
+        }
+        return;
+      }
+      running = true;
+      btnPlay.textContent = '⏸ Pause';
+      btnPlay.className = 'glow-btn px-5 py-2 rounded-lg font-semibold text-sm bg-amber-600 hover:bg-amber-500 text-white transition-colors';
+      btnStep.disabled = true;
+      btnRandom.disabled = true;
+      btnClear.disabled = true;
+      patternSelect.disabled = true;
+
+      let lastTime = 0;
+      let delay = getDelay();
+
+      function loop(timestamp) {
+        if (!running) return;
+        if (timestamp - lastTime >= delay) {
+          step();
+          lastTime = timestamp;
+        }
+        animationId = requestAnimationFrame(loop);
+      }
+      animationId = requestAnimationFrame(loop);
+    }
+
+    function stopPlay() {
+      running = false;
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+      }
+      btnPlay.textContent = '▶ Play';
+      btnPlay.className = 'glow-btn px-5 py-2 rounded-lg font-semibold text-sm bg-emerald-600 hover:bg-emerald-500 text-white transition-colors';
+      btnStep.disabled = false;
+      btnRandom.disabled = false;
+      btnClear.disabled = false;
+      patternSelect.disabled = false;
+    }
+
+    btnPlay.addEventListener('click', play);
+
+    btnStep.addEventListener('click', () => {
+      if (running) return;
+      step();
+    });
+
+    btnClear.addEventListener('click', () => {
+      if (running) return;
+      grid = createEmptyGrid();
+      generation = 0;
+      lastBorn = 0;
+      lastDied = 0;
+      draw();
+    });
+
+    btnRandom.addEventListener('click', () => {
+      if (running) return;
+      grid = randomGrid(0.25);
+      generation = 0;
+      lastBorn = 0;
+      lastDied = 0;
+      draw();
+    });
+
+    speedRange.addEventListener('input', () => {
+      // Update delay dynamically
+    });
+
+    patternSelect.addEventListener('change', () => {
+      if (running) return;
+      const val = patternSelect.value;
+      if (!val) return;
+
+      const pattern = PATTERNS[val];
+      if (!pattern) return;
+
+      const offsetR = Math.floor((ROWS - pattern.length) / 2);
+      const offsetC = Math.floor((COLS - pattern[0].length) / 2);
+      placePattern(pattern, offsetR, offsetC);
+      patternSelect.value = '';
+    });
+
+    // ─── Mouse Interaction ──────────────────────────────────────────────────────
+    let isDrawing = false;
+    let drawMode = 1; // 1 = paint, 0 = erase
+
+    canvas.addEventListener('mousedown', (e) => {
+      if (running) return;
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const mx = (e.clientX - rect.left) * scaleX;
+      const my = (e.clientY - rect.top) * scaleY;
+      const c = Math.floor(mx / CELL_SIZE);
+      const r = Math.floor(my / CELL_SIZE);
+      if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return;
+
+      isDrawing = true;
+      drawMode = grid[r][c] ? 0 : 1;
+      grid[r][c] = drawMode;
+      generation = 0;
+      draw();
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (!isDrawing || running) return;
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const mx = (e.clientX - rect.left) * scaleX;
+      const my = (e.clientY - rect.top) * scaleY;
+      const c = Math.floor(mx / CELL_SIZE);
+      const r = Math.floor(my / CELL_SIZE);
+      if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return;
+      if (grid[r][c] !== drawMode) {
+        grid[r][c] = drawMode;
+        generation = 0;
+        draw();
+      }
+    });
+
+    canvas.addEventListener('mouseup', () => { isDrawing = false; });
+    canvas.addEventListener('mouseleave', () => { isDrawing = false; });
+
+    // Touch support
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      if (running) return;
+      const touch = e.touches[0];
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const mx = (touch.clientX - rect.left) * scaleX;
+      const my = (touch.clientY - rect.top) * scaleY;
+      const c = Math.floor(mx / CELL_SIZE);
+      const r = Math.floor(my / CELL_SIZE);
+      if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return;
+      isDrawing = true;
+      drawMode = grid[r][c] ? 0 : 1;
+      grid[r][c] = drawMode;
+      generation = 0;
+      draw();
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      if (!isDrawing || running) return;
+      const touch = e.touches[0];
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const mx = (touch.clientX - rect.left) * scaleX;
+      const my = (touch.clientY - rect.top) * scaleY;
+      const c = Math.floor(mx / CELL_SIZE);
+      const r = Math.floor(my / CELL_SIZE);
+      if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return;
+      if (grid[r][c] !== drawMode) {
+        grid[r][c] = drawMode;
+        generation = 0;
+        draw();
+      }
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', () => { isDrawing = false; });
+
+    // ─── Keyboard Shortcuts ──────────────────────────────────────────────────────
+    document.addEventListener('keydown', (e) => {
+      if (e.target === patternSelect) return;
+      if (e.key === ' ' || e.key === 'Space') {
+        e.preventDefault();
+        play();
+      }
+      if (e.key === 'r' || e.key === 'R') {
+        if (!running) { btnRandom.click(); }
+      }
+      if (e.key === 'c' || e.key === 'C') {
+        if (!running) { btnClear.click(); }
+      }
+      if (e.key === 's' || e.key === 'S') {
+        if (!running) { btnStep.click(); }
+      }
+    });
+
+    // ─── Initial Draw ────────────────────────────────────────────────────────────
+    draw();
+  </script>
+</body>
+</html>

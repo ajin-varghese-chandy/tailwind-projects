@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pipeline — Deploy without the overhead</title>
+  <script src="https://cdn.tailwindcss.com">
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+
+    ::selection { background: #6366f1; color: white; }
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: #0b0b12; }
+    ::-webkit-scrollbar-thumb { background: #27273a; border-radius: 2px; }
+
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+
+    .section { padding: 100px 0; }
+    .section-sm { padding: 60px 0; }
+
+    .gradient-text {
+      background: linear-gradient(135deg, #e4e4ed 0%, #a5b4fc 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .gradient-text-strong {
+      background: linear-gradient(135deg, #f9fafb 30%, #818cf8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .card {
+      background: #12121c;
+      border: 1px solid #1e1e30;
+      border-radius: 12px;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .card:hover {
+      border-color: #2e2e4a;
+      transform: translateY(-2px);
+    }
+
+    .card-subtle {
+      background: #0e0e18;
+      border: 1px solid #1a1a2c;
+      border-radius: 10px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 22px;
+      border-radius: 8px;
+      font-weight: 500;
+      font-size: 0.9rem;
+      transition: all 0.15s ease;
+      cursor: pointer;
+      border: none;
+    }
+
+    .btn-primary {
+      background: #6366f1;
+      color: white;
+    }
+    .btn-primary:hover {
+      background: #5558e6;
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: #a1a1aa;
+      border: 1px solid #27273a;
+    }
+    .btn-secondary:hover {
+      border-color: #3e3e5a;
+      color: #e4e4ed;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      background: rgba(99, 102, 241, 0.08);
+      color: #818cf8;
+      border: 1px solid rgba(99, 102, 241, 0.12);
+    }
+
+    .nav-link {
+      color: #6b6b80;
+      font-size: 0.875rem;
+      transition: color 0.15s;
+    }
+    .nav-link:hover { color: #e4e4ed; }
+
+    .stat-number {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #e4e4ed;
+      letter-spacing: -0.02em;
+    }
+
+    .stat-label {
+      font-size: 0.8rem;
+      color: #525266;
+      margin-top: 4px;
+    }
+
+    .footer-link {
+      color: #525266;
+      font-size: 0.85rem;
+      transition: color 0.15s;
+    }
+    .footer-link:hover { color: #a1a1aa; }
+
+    .check {
+      color: #6366f1;
+      font-weight: 600;
+      margin-right: 6px;
+    }
+
+    .terminal {
+      background: #0a0a12;
+      border: 1px solid #1a1a2c;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .terminal-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      border-bottom: 1px solid #1a1a2c;
+      background: #0d0d18;
+    }
+
+    .terminal-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .terminal-line {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.8rem;
+      line-height: 1.7;
+      color: #7c7c94;
+    }
+    .terminal-line .cmd { color: #a5b4fc; }
+    .terminal-line .output { color: #6b6b80; }
+    .terminal-line .success { color: #34d399; }
+    .terminal-line .highlight { color: #f9fafb; }
+
+    .code-block {
+      background: #0a0a12;
+      border: 1px solid #1a1a2c;
+      border-radius: 10px;
+      padding: 20px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.8rem;
+      line-height: 1.8;
+      overflow-x: auto;
+    }
+    .code-block .comment { color: #3a3a52; }
+    .code-block .key { color: #f472b6; }
+    .code-block .string { color: #34d399; }
+    .code-block .bracket { color: #a5b4fc; }
+
+    @media (max-width: 768px) {
+      .section { padding: 60px 0; }
+      .stat-number { font-size: 1.5rem; }
+    }
+
+    .grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    .grid-3col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; }
+
+    @media (max-width: 768px) {
+      .grid-2col { grid-template-columns: 1fr; }
+      .grid-3col { grid-template-columns: 1fr; }
+    }
+
+    .grid-features {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    @media (min-width: 768px) {
+      .grid-features {
+        grid-template-columns: 1fr 1fr 1fr;
+      }
+      .grid-features .card:first-child {
+        grid-column: 1 / -1;
+      }
+    }
+
+    .pricing-card {
+      background: #12121c;
+      border: 1px solid #1e1e30;
+      border-radius: 12px;
+      padding: 32px;
+    }
+    .pricing-card.featured {
+      border-color: #6366f1;
+      background: linear-gradient(135deg, #12121c 0%, #16162a 100%);
+    }
+    .pricing-card.featured .btn-primary {
+      background: #6366f1;
+    }
+
+    input[type="email"] {
+      background: #12121c;
+      border: 1px solid #1e1e30;
+      color: #e4e4ed;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      outline: none;
+      width: 100%;
+      transition: border-color 0.15s;
+    }
+    input[type="email"]:focus {
+      border-color: #6366f1;
+    }
+    input[type="email"]::placeholder {
+      color: #3e3e52;
+    }
+
+    .faq-card {
+      background: #12121c;
+      border: 1px solid #1e1e30;
+      border-radius: 10px;
+      padding: 20px 24px;
+      transition: border-color 0.15s;
+    }
+    .faq-card[open] {
+      border-color: #27273a;
+    }
+    .faq-card summary {
+      list-style: none;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 500;
+      color: #e4e4ed;
+    }
+    .faq-card summary::-webkit-details-marker { display: none; }
+    .faq-card .arrow {
+      transition: transform 0.2s;
+      color: #525266;
+    }
+    .faq-card[open] .arrow {
+      transform: rotate(180deg);
+    }
+  </style>
+</head>
+<body class="bg-[#0b0b12] text-[#d4d4dc] antialiased">
+
+  <!-- Nav -->
+  <nav class="fixed top-0 left-0 right-0 z-50" style="background: rgba(11,11,18,0.85); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,0.04);">
+    <div class="container flex items-center justify-between h-14">
+      <div class="flex items-center gap-2">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <rect x="2" y="2" width="6" height="6" rx="1.5" fill="#6366f1"/>
+          <rect x="12" y="2" width="6" height="6" rx="1.5" fill="#6366f1" opacity="0.5"/>
+          <rect x="2" y="12" width="6" height="6" rx="1.5" fill="#6366f1" opacity="0.5"/>
+          <rect x="12" y="12" width="6" height="6" rx="1.5" fill="#6366f1"/>
+        </svg>
+        <span class="font-bold text-white tracking-tight">Pipeline</span>
+      </div>
+      <div class="hidden md:flex items-center gap-8">
+        <a href="#features" class="nav-link">Features</a>
+        <a href="#pricing" class="nav-link">Pricing</a>
+        <a href="#docs" class="nav-link">Docs</a>
+        <a href="#blog" class="nav-link">Blog</a>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="#" class="nav-link text-sm">Log in</a>
+        <button class="btn btn-primary text-sm">Deploy now</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="pt-36 pb-20">
+    <div class="container">
+      <div class="max-w-3xl">
+        <span class="tag mb-6 inline-block">Now in public beta</span>
+        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-[1.05] tracking-tight text-white mb-5">
+          Deploy serverless<br />
+          <span class="gradient-text-strong">without the overhead.</span>
+        </h1>
+        <p class="text-[#6b6b80] text-lg max-w-xl leading-relaxed mb-8">
+          Pipeline handles the infrastructure so you can focus on product.
+          Edge functions, static sites, and full-stack apps — all from a single
+          <code class="text-[#a5b4fc] bg-[#12121c] px-1.5 py-0.5 rounded text-sm">push</code>.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-3">
+          <button class="btn btn-primary text-base px-7 py-3">Start deploying — it's free</button>
+          <button class="btn btn-secondary text-base px-7 py-3">Read the docs</button>
+        </div>
+        <p class="text-[#3e3e52] text-sm mt-4">No credit card. 100GB bandwidth included.</p>
+      </div>
+
+      <!-- Terminal -->
+      <div class="mt-16 max-w-2xl terminal">
+        <div class="terminal-header">
+          <div class="terminal-dot" style="background: #ef4444; opacity: 0.6;"></div>
+          <div class="terminal-dot" style="background: #eab308; opacity: 0.6;"></div>
+          <div class="terminal-dot" style="background: #22c55e; opacity: 0.6;"></div>
+          <span class="text-xs text-[#3e3e52] ml-2">~/project — bash</span>
+        </div>
+        <div class="p-4 sm:p-5">
+          <div class="terminal-line"><span class="cmd">$</span> npx pipeline init</div>
+          <div class="terminal-line"><span class="output">  • Detected framework: Next.js</span></div>
+          <div class="terminal-line"><span class="output">  • Optimizing build pipeline...</span></div>
+          <div class="terminal-line"><span class="output">  • Provisioning edge regions (iad1, hnd1, fra1)</span></div>
+          <div class="terminal-line" style="margin-top: 6px;"><span class="cmd">$</span> git push pipeline main</div>
+          <div class="terminal-line"><span class="output">  • Building...</span></div>
+          <div class="terminal-line"><span class="output">  • Deploying to 3 regions</span></div>
+          <div class="terminal-line" style="margin-top: 6px;"><span class="success">✓</span> <span class="highlight">https://my-app.pipeline.dev</span> <span class="output">(12s)</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Logos -->
+  <section class="section-sm border-t border-[#14141e]">
+    <div class="container">
+      <p class="text-xs text-[#3e3e52] uppercase tracking-widest text-center mb-8">Trusted by engineering teams</p>
+      <div class="flex flex-wrap items-center justify-center gap-x-10 gap-y-4">
+        <span class="text-[#27273a] text-lg font-bold tracking-tight">Linear</span>
+        <span class="text-[#27273a] text-lg font-bold tracking-tight">Raycast</span>
+        <span class="text-[#27273a] text-lg font-bold tracking-tight">Cal.com</span>
+        <span class="text-[#27273a] text-lg font-bold tracking-tight">Dub</span>
+        <span class="text-[#27273a] text-lg font-bold tracking-tight">Plausible</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stats -->
+  <section class="section border-t border-[#14141e]">
+    <div class="container">
+      <div class="grid-2col items-center">
+        <div>
+          <span class="tag mb-3">By the numbers</span>
+          <h2 class="text-3xl sm:text-4xl font-bold text-white tracking-tight mb-4">Thousands of teams already ship with Pipeline</h2>
+          <p class="text-[#6b6b80] leading-relaxed">We've processed over 2 million deployments across 40+ edge regions. Average deploy time: 12 seconds.</p>
+        </div>
+        <div class="grid grid-cols-2 gap-8">
+          <div>
+            <div class="stat-number">14,000+</div>
+            <div class="stat-label">Active developers</div>
+          </div>
+          <div>
+            <div class="stat-number">2.3M</div>
+            <div class="stat-label">Total deployments</div>
+          </div>
+          <div>
+            <div class="stat-number">40</div>
+            <div class="stat-label">Edge regions</div>
+          </div>
+          <div>
+            <div class="stat-number">99.99%</div>
+            <div class="stat-label">Uptime this year</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section id="features" class="section border-t border-[#14141e]">
+    <div class="container">
+      <div class="max-w-2xl mb-14">
+        <span class="tag mb-3">Features</span>
+        <h2 class="text-3xl sm:text-4xl font-bold text-white tracking-tight">Everything you need to ship, nothing you don't</h2>
+      </div>
+
+      <div class="grid-features">
+        <div class="card p-6 sm:p-7 flex sm:flex-row flex-col sm:items-start gap-5">
+          <div style="flex-shrink: 0; width: 44px; height: 44px; background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.15); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#818cf8" stroke-width="1.5"><path d="M3 12h14M9 4l6 6-6 6"/></svg>
+          </div>
+          <div>
+            <h3 class="font-semibold text-white text-lg mb-1.5">Incremental deploys</h3>
+            <p class="text-[#6b6b80] text-sm leading-relaxed">Only changed assets are rebuilt. Most deploys finish in under 10 seconds. Rollback with a single click.</p>
+          </div>
+        </div>
+
+        <div class="card p-6">
+          <div style="width: 40px; height: 40px; background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.15); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 14px;">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#818cf8" stroke-width="1.5"><path d="M3 9a6 6 0 1112 0A6 6 0 013 9z"/><path d="M9 5.5V9l2 2"/></svg>
+          </div>
+          <h3 class="font-semibold text-white mb-1.5">Edge functions</h3>
+          <p class="text-[#6b6b80] text-sm leading-relaxed">Run code in 40 regions. Sub-5ms cold starts. No cold starts if you've had a request in the last 5 minutes.</p>
+        </div>
+
+        <div class="card p-6">
+          <div style="width: 40px; height: 40px; background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.15); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 14px;">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#818cf8" stroke-width="1.5"><path d="M6 12h6M6 8h6M3 15h12a2 2 0 002-2V5a2 2 0 00-2-2H3a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+          </div>
+          <h3 class="font-semibold text-white mb-1.5">Preview URLs</h3>
+          <p class="text-[#6b6b80] text-sm leading-relaxed">Every branch gets a unique URL. Share work before it's live. Built-in password protection for staging.</p>
+        </div>
+
+        <div class="card p-6">
+          <div style="width: 40px; height: 40px; background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.15); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 14px;">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#818cf8" stroke-width="1.5"><path d="M12 3h3v3M6 15H3v-3M15 3l-6 6M3 15l6-6"/></svg>
+          </div>
+          <h3 class="font-semibold text-white mb-1.5">Zero config</h3>
+          <p class="text-[#6b6b80] text-sm leading-relaxed">Auto-detects Next.js, SvelteKit, Astro, Remix, Nuxt, and more. Override with a single config file if needed.</p>
+        </div>
+
+        <div class="card p-6">
+          <div style="width: 40px; height: 40px; background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.15); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 14px;">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#818cf8" stroke-width="1.5"><path d="M9 1v16M1 9h16"/></svg>
+          </div>
+          <h3 class="font-semibold text-white mb-1.5">Analytics built in</h3>
+          <p class="text-[#6b6b80] text-sm leading-relaxed">Traffic, errors, and performance data without third-party scripts. 60-day retention on all plans.</p>
+        </div>
+
+        <div class="card p-6">
+          <div style="width: 40px; height: 40px; background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.15); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 14px;">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#818cf8" stroke-width="1.5"><path d="M4 9h10M9 4v10"/></svg>
+          </div>
+          <h3 class="font-semibold text-white mb-1.5">Custom domains + SSL</h3>
+          <p class="text-[#6b6b80] text-sm leading-relaxed">Add a domain in one click. Automatic HTTPS renewal. Apex, subdomain, and wildcard support.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How it works + code -->
+  <section class="section border-t border-[#14141e]">
+    <div class="container">
+      <div class="grid-2col gap-12 items-start">
+        <div>
+          <span class="tag mb-3">How it works</span>
+          <h2 class="text-3xl sm:text-4xl font-bold text-white tracking-tight mb-5">Push code. That's it.</h2>
+          <p class="text-[#6b6b80] leading-relaxed mb-8">Three steps from local to live. No YAML pipelines to maintain, no servers to provision.</p>
+
+          <div class="space-y-6">
+            <div class="flex gap-4">
+              <span class="text-[#6366f1] font-bold text-lg leading-none mt-0.5">01</span>
+              <div>
+                <h3 class="font-semibold text-white">Connect your repository</h3>
+                <p class="text-[#6b6b80] text-sm mt-1">Link GitHub, GitLab, or Bitbucket. We auto-detect your framework and configure the build.</p>
+              </div>
+            </div>
+            <div class="flex gap-4">
+              <span class="text-[#6366f1] font-bold text-lg leading-none mt-0.5">02</span>
+              <div>
+                <h3 class="font-semibold text-white">Configure (or don't)</h3>
+                <p class="text-[#6b6b80] text-sm mt-1">Most projects work with zero config. For edge cases, add a <code class="text-[#a5b4fc] text-xs bg-[#12121c] px-1 rounded">pipeline.json</code>.</p>
+              </div>
+            </div>
+            <div class="flex gap-4">
+              <span class="text-[#6366f1] font-bold text-lg leading-none mt-0.5">03</span>
+              <div>
+                <h3 class="font-semibold text-white">Deploy and iterate</h3>
+                <p class="text-[#6b6b80] text-sm mt-1">Every push triggers a build. Preview URLs for branches. Instant rollback if something breaks.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="code-block">
+          <div><span class="comment">// pipeline.json</span></div>
+          <div><span class="bracket">{</span></div>
+          <div>  <span class="key">"framework"</span>: <span class="string">"nextjs"</span>,</div>
+          <div>  <span class="key">"regions"</span>: <span class="bracket">[</span><span class="string">"iad1"</span>, <span class="string">"hnd1"</span>, <span class="string">"fra1"</span><span class="bracket">]</span>,</div>
+          <div>  <span class="key">"build"</span>: <span class="bracket">{</span></div>
+          <div>    <span class="key">"command"</span>: <span class="string">"npm run build"</span>,</div>
+          <div>    <span class="key">"output"</span>: <span class="string">".next"</span></div>
+          <div>  <span class="bracket">}</span></div>
+          <div><span class="bracket">}</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Testimonial -->
+  <section class="section-sm border-t border-[#14141e]">
+    <div class="container">
+      <div class="card-subtle p-8 sm:p-10 max-w-3xl mx-auto text-center">
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="#6366f1" opacity="0.3" class="mx-auto mb-5">
+          <path d="M9.5 6C5.9 6 3 9 3 13v9h9v-9H7c0-2.2 1.8-4 4-4V6h-1.5zM22 6c-3.6 0-6.5 3-6.5 7v9h9v-9h-5c0-2.2 1.8-4 4-4V6H22z"/>
+        </svg>
+        <blockquote class="text-lg sm:text-xl text-white/80 leading-relaxed font-medium">
+          "We migrated our entire platform to Pipeline in a weekend. The DX is incredible — it just disappears. Our deploy time went from 8 minutes to 11 seconds."
+        </blockquote>
+        <div class="mt-6 flex items-center justify-center gap-3">
+          <div style="width: 36px; height: 36px; border-radius: 50%; background: #1e1e30; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 600; color: #818cf8;">SK</div>
+          <div class="text-left">
+            <div class="text-white text-sm font-medium">Sarah Kim</div>
+            <div class="text-[#525266] text-xs">CTO, Linear</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pricing -->
+  <section id="pricing" class="section border-t border-[#14141e]">
+    <div class="container">
+      <div class="text-center max-w-2xl mx-auto mb-14">
+        <span class="tag mb-3">Pricing</span>
+        <h2 class="text-3xl sm:text-4xl font-bold text-white tracking-tight mb-4">Simple enough for side projects, robust enough for enterprises</h2>
+      </div>
+
+      <div class="grid sm:grid-cols-3 gap-4 max-w-4xl mx-auto">
+        <div class="pricing-card flex flex-col">
+          <h3 class="text-white font-semibold text-lg">Free</h3>
+          <p class="text-[#525266] text-sm mb-5">For personal projects</p>
+          <div class="mb-6">
+            <span class="text-3xl font-bold text-white">$0</span>
+            <span class="text-[#525266] text-sm">/month</span>
+          </div>
+          <ul class="space-y-2.5 mb-8 flex-1 text-sm">
+            <li><span class="check">✓</span>100GB bandwidth</li>
+            <li><span class="check">✓</span>1,000 edge invocations/mo</li>
+            <li><span class="check">✓</span>3 projects</li>
+            <li><span class="check">✓</span>Community support</li>
+            <li><span class="check">✓</span>Shared CDN</li>
+          </ul>
+          <button class="btn btn-secondary w-full justify-center">Get started</button>
+        </div>
+
+        <div class="pricing-card featured flex flex-col relative">
+          <span class="text-xs text-[#6366f1] font-semibold bg-[#6366f1]/10 px-3 py-1 rounded-full absolute -top-3 left-6">Most popular</span>
+          <h3 class="text-white font-semibold text-lg">Pro</h3>
+          <p class="text-[#525266] text-sm mb-5">For professional teams</p>
+          <div class="mb-6">
+            <span class="text-3xl font-bold text-white">$20</span>
+            <span class="text-[#525266] text-sm">/month</span>
+          </div>
+          <ul class="space-y-2.5 mb-8 flex-1 text-sm">
+            <li><span class="check">✓</span>1TB bandwidth</li>
+            <li><span class="check">✓</span>100,000 edge invocations/mo</li>
+            <li><span class="check">✓</span>Unlimited projects</li>
+            <li><span class="check">✓</span>Priority support</li>
+            <li><span class="check">✓</span>Global CDN + edge cache</li>
+            <li><span class="check">✓</span>Analytics & logs (30-day)</li>
+            <li><span class="check">✓</span>Up to 10 custom domains</li>
+          </ul>
+          <button class="btn btn-primary w-full justify-center">Get started</button>
+        </div>
+
+        <div class="pricing-card flex flex-col">
+          <h3 class="text-white font-semibold text-lg">Enterprise</h3>
+          <p class="text-[#525266] text-sm mb-5">For large organizations</p>
+          <div class="mb-6">
+            <span class="text-3xl font-bold text-white">Custom</span>
+          </div>
+          <ul class="space-y-2.5 mb-8 flex-1 text-sm">
+            <li><span class="check">✓</span>Custom bandwidth limits</li>
+            <li><span class="check">✓</span>Unlimited invocations</li>
+            <li><span class="check">✓</span>SSO/SAML</li>
+            <li><span class="check">✓</span>Dedicated support</li>
+            <li><span class="check">✓</span>Custom SLA</li>
+            <li><span class="check">✓</span>On-premise option</li>
+          </ul>
+          <button class="btn btn-secondary w-full justify-center">Contact sales</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="section border-t border-[#14141e]">
+    <div class="container max-w-2xl">
+      <h2 class="text-2xl font-bold text-white text-center mb-10">Frequently asked questions</h2>
+      <div class="space-y-3">
+        <details class="faq-card">
+          <summary>
+            Which frameworks are supported?
+            <svg class="arrow" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5l4 4 4-4"/></svg>
+          </summary>
+          <p class="text-[#6b6b80] text-sm mt-4 leading-relaxed">Next.js, Nuxt, SvelteKit, Astro, Remix, Gatsby, Hugo, Jekyll, and any static site builder. Custom frameworks work via Dockerfile in your repo.</p>
+        </details>
+        <details class="faq-card">
+          <summary>
+            Is there a free tier for open-source projects?
+            <svg class="arrow" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5l4 4 4-4"/></svg>
+          </summary>
+          <p class="text-[#6b6b80] text-sm mt-4 leading-relaxed">Yes. Verified open-source projects get the Pro plan free. Apply through our Open Source page and we'll get back to you within 48 hours.</p>
+        </details>
+        <details class="faq-card">
+          <summary>
+            Can I use my own domain?
+            <svg class="arrow" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5l4 4 4-4"/></svg>
+          </summary>
+          <p class="text-[#6b6b80] text-sm mt-4 leading-relaxed">Yes — add it in one click from the dashboard. SSL is automatic via Let's Encrypt. Supports apex, subdomains, and wildcard records.</p>
+        </details>
+        <details class="faq-card">
+          <summary>
+            What counts as an edge invocation?
+            <svg class="arrow" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5l4 4 4-4"/></svg>
+          </summary>
+          <p class="text-[#6b6b80] text-sm mt-4 leading-relaxed">Every HTTP request to your edge functions. Static asset requests don't count. We reset the counter on the first of each month.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="section border-t border-[#14141e]">
+    <div class="container text-center max-w-lg">
+      <h2 class="text-3xl font-bold text-white mb-3">Ready to ship?</h2>
+      <p class="text-[#6b6b80] mb-8">Join 14,000+ developers deploying with Pipeline. Free plan includes 100GB bandwidth and 3 projects.</p>
+      <form class="flex flex-col sm:flex-row gap-3" onsubmit="event.preventDefault(); alert('Check your inbox for confirmation.');">
+        <input type="email" placeholder="you@company.com" required />
+        <button type="submit" class="btn btn-primary whitespace-nowrap">Deploy for free</button>
+      </form>
+      <p class="text-[#3e3e52] text-xs mt-3">No spam. Unsubscribe anytime.</p>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="section-sm border-t border-[#14141e]">
+    <div class="container">
+      <div class="grid sm:grid-cols-2 lg:grid-cols-5 gap-8 mb-10">
+        <div class="lg:col-span-2">
+          <div class="flex items-center gap-2 mb-3">
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+              <rect x="2" y="2" width="6" height="6" rx="1.5" fill="#6366f1"/>
+              <rect x="12" y="2" width="6" height="6" rx="1.5" fill="#6366f1" opacity="0.5"/>
+              <rect x="2" y="12" width="6" height="6" rx="1.5" fill="#6366f1" opacity="0.5"/>
+              <rect x="12" y="12" width="6" height="6" rx="1.5" fill="#6366f1"/>
+            </svg>
+            <span class="font-bold text-white">Pipeline</span>
+          </div>
+          <p class="text-[#3e3e52] text-sm leading-relaxed max-w-xs">Serverless deployment for modern teams. Edge functions, static sites, and full-stack apps.</p>
+        </div>
+        <div>
+          <h4 class="text-white text-sm font-semibold mb-4">Product</h4>
+          <div class="flex flex-col gap-2">
+            <a href="#" class="footer-link">Features</a>
+            <a href="#" class="footer-link">Pricing</a>
+            <a href="#" class="footer-link">Changelog</a>
+            <a href="#" class="footer-link">Integrations</a>
+          </div>
+        </div>
+        <div>
+          <h4 class="text-white text-sm font-semibold mb-4">Company</h4>
+          <div class="flex flex-col gap-2">
+            <a href="#" class="footer-link">About</a>
+            <a href="#" class="footer-link">Blog</a>
+            <a href="#" class="footer-link">Careers</a>
+            <a href="#" class="footer-link">Contact</a>
+          </div>
+        </div>
+        <div>
+          <h4 class="text-white text-sm font-semibold mb-4">Legal</h4>
+          <div class="flex flex-col gap-2">
+            <a href="#" class="footer-link">Privacy</a>
+            <a href="#" class="footer-link">Terms</a>
+            <a href="#" class="footer-link">Security</a>
+          </div>
+        </div>
+      </div>
+      <div class="border-t border-[#14141e] pt-6 flex flex-col sm:flex-row justify-between items-center gap-3 text-xs text-[#3e3e52]">
+        <p>© 2026 Pipeline. All rights reserved.</p>
+        <div class="flex gap-4">
+          <span>Status</span>
+          <span>SOC 2</span>
+          <span>GDPR</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>
